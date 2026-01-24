@@ -22,12 +22,18 @@ class ApiService {
 
       try {
         const errorData = await response.json();
-        error.message = errorData.message || error.message;
+
+        // ✅ FastAPI usually returns { detail: "..." }
+        error.message =
+          errorData?.message ||
+          errorData?.detail ||
+          errorData?.error ||
+          error.message;
       } catch {
         // Use default error message
       }
 
-      // Handle unauthorized
+      // ✅ Handle unauthorized
       if (response.status === 401) {
         localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
         localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);

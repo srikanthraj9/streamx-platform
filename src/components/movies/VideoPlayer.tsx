@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import {
   Play,
   Pause,
@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { userService } from "@/services/user";
 import { Slider } from "@/components/ui/slider";
 import { useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "@/config"; // ✅ ADD THIS
 
 interface VideoPlayerProps {
   movie: Movie;
@@ -39,14 +40,28 @@ export function VideoPlayer({ movie, streamData }: VideoPlayerProps) {
 
   const navigate = useNavigate();
 
+  // ✅ Normalize stream url (IMPORTANT FIX)
+  const streamUrl = useMemo(() => {
+    let url = (streamData as any)?.streamUrl || "";
+
+    // backend returns "/uploads/...."
+    if (typeof url === "string" && url.startsWith("/uploads")) {
+      url = `${API_BASE_URL}${url}`;
+    }
+
+    return url;
+  }, [streamData]);
+
   // Format time helper
   const formatTime = (seconds: number): string => {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
     const s = Math.floor(seconds % 60);
-    
+
     if (h > 0) {
-      return `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+      return `${h}:${m.toString().padStart(2, "0")}:${s
+        .toString()
+        .padStart(2, "0")}`;
     }
     return `${m}:${s.toString().padStart(2, "0")}`;
   };
@@ -226,9 +241,10 @@ export function VideoPlayer({ movie, streamData }: VideoPlayerProps) {
       <video
         ref={videoRef}
         className="w-full h-full object-contain"
-        src={streamData.streamUrl}
+        src={streamUrl}  // ✅ FIXED HERE
         onClick={togglePlay}
         playsInline
+        controls={false}
       />
 
       {/* Buffering Indicator */}
@@ -287,25 +303,46 @@ export function VideoPlayer({ movie, streamData }: VideoPlayerProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               {/* Play/Pause */}
-              <button onClick={togglePlay} className="text-foreground hover:text-primary transition-colors">
-                {isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6 fill-current" />}
+              <button
+                onClick={togglePlay}
+                className="text-foreground hover:text-primary transition-colors"
+              >
+                {isPlaying ? (
+                  <Pause className="h-6 w-6" />
+                ) : (
+                  <Play className="h-6 w-6 fill-current" />
+                )}
               </button>
 
               {/* Skip Backward */}
-              <button onClick={() => skip(-10)} className="text-foreground hover:text-primary transition-colors">
+              <button
+                onClick={() => skip(-10)}
+                className="text-foreground hover:text-primary transition-colors"
+              >
                 <SkipBack className="h-6 w-6" />
               </button>
 
               {/* Skip Forward */}
-              <button onClick={() => skip(10)} className="text-foreground hover:text-primary transition-colors">
+              <button
+                onClick={() => skip(10)}
+                className="text-foreground hover:text-primary transition-colors"
+              >
                 <SkipForward className="h-6 w-6" />
               </button>
 
               {/* Volume */}
               <div className="flex items-center gap-2">
-                <button onClick={toggleMute} className="text-foreground hover:text-primary transition-colors">
-                  {isMuted || volume === 0 ? <VolumeX className="h-6 w-6" /> : <Volume2 className="h-6 w-6" />}
+                <button
+                  onClick={toggleMute}
+                  className="text-foreground hover:text-primary transition-colors"
+                >
+                  {isMuted || volume === 0 ? (
+                    <VolumeX className="h-6 w-6" />
+                  ) : (
+                    <Volume2 className="h-6 w-6" />
+                  )}
                 </button>
+
                 <div className="w-24 hidden sm:block">
                   <Slider
                     value={[isMuted ? 0 : volume]}
@@ -329,8 +366,15 @@ export function VideoPlayer({ movie, streamData }: VideoPlayerProps) {
               </button>
 
               {/* Fullscreen */}
-              <button onClick={toggleFullscreen} className="text-foreground hover:text-primary transition-colors">
-                {isFullscreen ? <Minimize className="h-6 w-6" /> : <Maximize className="h-6 w-6" />}
+              <button
+                onClick={toggleFullscreen}
+                className="text-foreground hover:text-primary transition-colors"
+              >
+                {isFullscreen ? (
+                  <Minimize className="h-6 w-6" />
+                ) : (
+                  <Maximize className="h-6 w-6" />
+                )}
               </button>
             </div>
           </div>

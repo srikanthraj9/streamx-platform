@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { X, Play, Plus, Check, ThumbsUp, Share2 } from "lucide-react";
 import { Movie } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { userService } from "@/services/user";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { API_BASE_URL } from "@/config";
 
 interface MovieModalProps {
   movie: Movie | null;
@@ -18,24 +19,78 @@ export function MovieModal({ movie, isOpen, onClose }: MovieModalProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (movie) {
-      setIsInList(userService.isInWatchlist(movie.id));
+  // ✅ Normalize backend movie fields → frontend safe fields
+  const normalized = useMemo(() => {
+    if (!movie) return null;
+
+    const base = API_BASE_URL.replace(/\/$/, "");
+
+    // ✅ backdrop / banner image
+    let backdropUrl =
+      (movie as any).backdropUrl ||
+      (movie as any).bannerUrl ||
+      (movie as any).banner_url ||
+      (movie as any).posterUrl ||
+      (movie as any).poster_url ||
+      "";
+
+    // ✅ prefix uploads paths
+    if (typeof backdropUrl === "string" && backdropUrl.startsWith("/uploads")) {
+      backdropUrl = `${base}${backdropUrl}`;
     }
+
+    // ✅ rating label
+    const maturityRating =
+      (movie as any).maturityRating || (movie as any).rating || "PG-13";
+
+    // ✅ release year
+    const releaseYear =
+      (movie as any).releaseYear || (movie as any).release_year || "";
+
+    // ✅ duration in minutes
+    const durationSeconds =
+      (movie as any).durationSeconds ?? (movie as any).duration_seconds ?? null;
+
+    const durationMin =
+      typeof durationSeconds === "number"
+        ? Math.max(1, Math.round(durationSeconds / 60))
+        : typeof (movie as any).duration === "number"
+          ? (movie as any).duration
+          : "";
+
+    // ✅ genres list (backend gives genre string)
+    const genres: string[] =
+      (movie as any).genres ??
+      ((movie as any).genre ? [(movie as any).genre] : []);
+
+    // ✅ match percent fallback
+    const matchPercent =
+      typeof (movie as any).match === "number"
+        ? Math.round((movie as any).match)
+        : 90;
+
+    return {
+      backdropUrl,
+      maturityRating,
+      releaseYear,
+      durationMin,
+      genres,
+      matchPercent,
+    };
   }, [movie]);
 
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "unset";
-    }
+    if (movie) setIsInList(userService.isInWatchlist(movie.id));
+  }, [movie]);
+
+  useEffect(() => {
+    document.body.style.overflow = isOpen ? "hidden" : "unset";
     return () => {
       document.body.style.overflow = "unset";
     };
   }, [isOpen]);
 
-  if (!isOpen || !movie) return null;
+  if (!isOpen || !movie || !normalized) return null;
 
   const handlePlay = () => {
     onClose();
@@ -77,12 +132,17 @@ export function MovieModal({ movie, isOpen, onClose }: MovieModalProps) {
         </button>
 
         {/* Backdrop Image */}
-        <div className="relative aspect-video">
-          <img
-            src={movie.backdropUrl}
-            alt={movie.title}
-            className="w-full h-full object-cover"
-          />
+        <div className="relative aspect-video bg-muted">
+          {normalized.backdropUrl ? (
+            <img
+              src={normalized.backdropUrl}
+              alt={movie.title}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-muted" />
+          )}
+
           <div className="absolute inset-0 bg-gradient-to-t from-card via-card/40 to-transparent" />
 
           {/* Play Button Overlay */}
@@ -114,6 +174,7 @@ export function MovieModal({ movie, isOpen, onClose }: MovieModalProps) {
               <Play className="h-4 w-4 fill-current" />
               Play
             </Button>
+
             <button
               onClick={handleToggleWatchlist}
               className={cn(
@@ -125,9 +186,11 @@ export function MovieModal({ movie, isOpen, onClose }: MovieModalProps) {
             >
               {isInList ? <Check className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
             </button>
+
             <button className="p-3 rounded-full border-2 border-muted-foreground/50 hover:border-foreground transition-colors">
               <ThumbsUp className="h-5 w-5" />
             </button>
+
             <button className="p-3 rounded-full border-2 border-muted-foreground/50 hover:border-foreground transition-colors ml-auto">
               <Share2 className="h-5 w-5" />
             </button>
@@ -136,13 +199,21 @@ export function MovieModal({ movie, isOpen, onClose }: MovieModalProps) {
           {/* Meta Info */}
           <div className="flex flex-wrap items-center gap-3 text-sm mb-4">
             <span className="text-green-500 font-semibold">
-              {Math.round(movie.rating * 10)}% Match
+              {normalized.matchPercent}% Match
             </span>
-            <span className="text-muted-foreground">{movie.releaseYear}</span>
+
+            {normalized.releaseYear && (
+              <span className="text-muted-foreground">{normalized.releaseYear}</span>
+            )}
+
             <span className="px-1.5 py-0.5 border border-muted-foreground/50 text-xs">
-              {movie.maturityRating || "PG-13"}
+              {normalized.maturityRating}
             </span>
-            <span className="text-muted-foreground">{movie.duration} min</span>
+
+            {normalized.durationMin && (
+              <span className="text-muted-foreground">{normalized.durationMin} min</span>
+            )}
+
             <span className="px-2 py-0.5 text-xs rounded bg-muted text-muted-foreground">
               HD
             </span>
@@ -155,24 +226,31 @@ export function MovieModal({ movie, isOpen, onClose }: MovieModalProps) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             <div>
               <span className="text-muted-foreground">Genres: </span>
-              <span>{movie.genres.join(", ")}</span>
+              <span>
+                {normalized.genres.length > 0
+                  ? normalized.genres.join(", ")
+                  : "Movie"}
+              </span>
             </div>
-            {movie.cast && (
+
+            {(movie as any).cast && Array.isArray((movie as any).cast) && (
               <div>
                 <span className="text-muted-foreground">Cast: </span>
-                <span>{movie.cast.join(", ")}</span>
+                <span>{(movie as any).cast.join(", ")}</span>
               </div>
             )}
-            {movie.director && (
+
+            {(movie as any).director && (
               <div>
                 <span className="text-muted-foreground">Director: </span>
-                <span>{movie.director}</span>
+                <span>{(movie as any).director}</span>
               </div>
             )}
-            {movie.language && (
+
+            {(movie as any).language && (
               <div>
                 <span className="text-muted-foreground">Language: </span>
-                <span>{movie.language}</span>
+                <span>{(movie as any).language}</span>
               </div>
             )}
           </div>

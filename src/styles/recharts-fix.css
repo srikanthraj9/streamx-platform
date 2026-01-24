@@ -1,0 +1,45 @@
+/* ✅ Fix Recharts Tooltip + Legend being affected by global CSS / Tailwind */
+
+.recharts-wrapper,
+.recharts-surface {
+  overflow: visible !important;
+}
+
+.recharts-legend-wrapper {
+  width: auto !important;
+}
+
+.recharts-default-tooltip {
+  width: auto !important;
+  height: auto !important;
+  max-width: 320px;
+  padding: 10px 12px !important;
+  box-sizing: border-box !important;
+
+  /* If global CSS changes font sizes */
+  font-size: 12px !important;
+  line-height: 1.3 !important;
+
+  /* Ensure tooltip not transparent due to global theme */
+  background: rgba(10, 10, 10, 0.92) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 10px !important;
+}
+
+.recharts-tooltip-label {
+  font-weight: 600 !important;
+  margin-bottom: 6px !important;
+}
+
+.recharts-tooltip-item {
+  padding: 2px 0 !important;
+}
+
+.recharts-tooltip-item-name,
+.recharts-tooltip-item-value {
+  font-size: 12px !important;
+}
+
+.recharts-text {
+  dominant-baseline: central;
+}

@@ -18,6 +18,9 @@ import Watchlist from "./pages/Watchlist";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
+// ✅ Admin Page
+import AdminUpload from "./pages/AdminUpload";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -26,14 +29,21 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
+
+        {/* ✅ FIX: React Router Future Flags (removes warnings) */}
+        <BrowserRouter
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true,
+          }}
+        >
           <Routes>
-            {/* Public Routes */}
+            {/* ✅ Public Routes */}
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
 
-            {/* Protected Routes */}
+            {/* ✅ Protected Routes */}
             <Route
               path="/browse"
               element={
@@ -42,6 +52,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+
             <Route
               path="/movie/:id"
               element={
@@ -50,6 +61,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+
             <Route
               path="/watch/:id"
               element={
@@ -58,6 +70,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+
             <Route
               path="/search"
               element={
@@ -66,6 +79,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+
             <Route
               path="/watchlist"
               element={
@@ -74,6 +88,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+
             <Route
               path="/profile"
               element={
@@ -83,7 +98,17 @@ const App = () => (
               }
             />
 
-            {/* Catch-all */}
+            {/* ✅ Admin Upload (Netflix Studio style) */}
+            <Route
+              path="/admin/upload"
+              element={
+                <ProtectedRoute>
+                  <AdminUpload />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* ✅ Catch-all */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
